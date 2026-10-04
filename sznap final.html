@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Boldog 30. Születésnapot!</title>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;1,400&display=swap" rel="stylesheet">
+    
+    <!-- Leaflet CSS (Térképhez) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <!-- Canvas Confetti Library -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <style>
+        :root {
+            --primary-color: #2b580c;
+            --accent-color: #d4a373;
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --text-main: #2d3142;
+            --text-muted: #4f5d75;
+            --correct-green: #2a9d8f;
+            --wrong-red: #e76f51;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 700px;
+            background: var(--card-bg);
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.08);
+            padding: 35px;
+            overflow: hidden;
+        }
+
+        /* Header Styles */
+        .quiz-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .quiz-header h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 2.2rem;
+            color: var(--primary-color);
+            margin-bottom: 8px;
+        }
+
+        .quiz-header p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+
+        /* Progress Bar */
+        .progress-bar-container {
+            width: 100%;
+            height: 8px;
+            background-color: #e9ecef;
+            border-radius: 10px;
+            margin-top: 20px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--accent-color), var(--primary-color));
+            transition: width 0.4s ease;
+        }
+
+        /* Question Styles */
+        .question-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            text-align: center;
+            color: var(--text-main);
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+        }
+
+        .option-btn {
+            background-color: #f1f3f5;
+            border: 2px solid transparent;
+            padding: 14px 20px;
+            border-radius: 12px;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 1rem;
+            color: var(--text-main);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: left;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .option-btn:hover {
+            background-color: #e9ecef;
+            transform: translateY(-2px);
+        }
+
+        .option-btn.correct {
+            background-color: rgba(42, 157, 143, 0.15);
+            border-color: var(--correct-green);
+            color: var(--correct-green);
+            font-weight: 600;
+        }
+
+        .option-btn.wrong {
+            background-color: rgba(231, 111, 81, 0.15);
+            border-color: var(--wrong-red);
+            color: var(--wrong-red);
+        }
+
+        /* Feedback Area */
+        .feedback-message {
+            margin-top: 15px;
+            text-align: center;
+            font-weight: 500;
+            min-height: 24px;
+        }
+
+        /* Reveal Section */
+        #reveal-section {
+            display: none;
+            text-align: center;
+        }
+
+        .map-intro-text {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.5rem;
+            font-style: italic;
+            color: var(--primary-color);
+            margin-bottom: 25px;
+            line-height: 1.4;
+        }
+
+        #button-container {
+            position: relative;
+            min-height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 20px 0;
+        }
+
+        #start-flight-btn {
+            position: relative;
+            transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            font-weight: 600;
+            padding: 16px 36px;
+            cursor: pointer;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+        }
+
+        #map {
+            height: 380px;
+            width: 100%;
+            border-radius: 16px;
+            margin-bottom: 25px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .gift-details {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.8s ease;
+            display: none;
+        }
+
+        .gift-details.visible {
+            opacity: 1;
+            transform: translateY(0);
+            display: block;
+        }
+
+        .gift-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 2.2rem;
+            color: var(--primary-color);
+            margin-bottom: 10px;
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+
+        .gift-dates {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--accent-color);
+            margin-bottom: 15px;
+        }
+
+        .heart-badge {
+            display: inline-block;
+            background: #ffe3e3;
+            color: #d63384;
+            padding: 8px 18px;
+            border-radius: 20px;
+            font-weight: 600;
+            margin-top: 15px;
+        }
+
+        .plane-icon {
+            font-size: 28px;
+            text-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            transition: transform 0.1s linear;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        
+        <!-- QUIZ HEADER -->
+        <div class="quiz-header" id="quiz-header">
+            <h1>Szülinapi Kvíz ✨</h1>
+            <p>Válaszolj helyesen a kérdésekre, hogy megtudd a meglepetést!</p>
+            <div class="progress-bar-container">
+                <div class="progress-bar" id="progress-bar"></div>
+            </div>
+        </div>
+
+        <!-- QUIZ BODY -->
+        <div id="quiz-body">
+            <div class="question-title" id="question-text">Kérdés betöltése...</div>
+            <div class="options-grid" id="options-container"></div>
+            <div class="feedback-message" id="feedback-message"></div>
+        </div>
+
+        <!-- FINAL REVEAL SECTION -->
+        <div id="reveal-section">
+            <div class="map-intro-text">
+                "Sok helyen jártunk már közösen, de ez most más lesz..."
+		Azt hitted fázni fogunk?! Arra számítottál, hogy Olaszország? HÁT NEM!!
+            </div>
+
+            <!-- Játékos elugró gomb -->
+            <div id="button-container">
+                <button id="start-flight-btn" class="option-btn" onclick="handleButtonClick()">
+                    Na lássuk! ✈️
+                </button>
+            </div>
+
+            <!-- Térkép -->
+            <div id="map" style="display: none;"></div>
+
+            <!-- Ajándék kártya -->
+            <div class="gift-details" id="gift-details">
+                <div class="gift-title">TENERIFE 🏝️</div>
+                <div class="gift-dates">🗓️ 2026. október 15. – október 24.</div>
+                <p style="color: var(--text-muted); font-size: 1.05rem; line-height: 1.6;">
+                    Csomagolj, mert hamarosan együtt fedezzük fel az örök tavasz szigetét, a Teide csúcsát és az Atlanti-óceán hűsítő hullámait!
+                </p>
+                <div class="heart-badge">Szeretlek Csira! Nagyon Boldog 30. Születésnapot! ❤️</div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+        // Saját kérdések adatbázisa
+        const questions = [
+            {
+                question: "Mikor van az évfordulónk?",
+                options: ["Március 14.", "Április 7.", "Május 20."],
+                correct: 1
+            },
+            {
+                question: "Mikor házasodtunk össze?",
+                options: ["2023. szeptember 2.", "2022. augusztus 20.", "2023. október 14."],
+                correct: 0
+            },
+            {
+                question: "Hol voltunk először közösen nyaralni?",
+                options: ["Siófokon", "Pécsett", "Szegeden"],
+                correct: 2
+            },
+            {
+                question: "Hol voltunk először külföldön nyaralni?",
+                options: ["Bibione", "Róma", "Zakynthos"],
+                correct: 0
+            }
+        ];
+
+        let currentQuestion = 0;
+        let selectedOption = null;
+        let buttonClicks = 0;
+
+        function loadQuestion() {
+            const q = questions[currentQuestion];
+            document.getElementById('question-text').innerText = `${currentQuestion + 1}. ${q.question}`;
+            
+            const optionsContainer = document.getElementById('options-container');
+            optionsContainer.innerHTML = '';
+            document.getElementById('feedback-message').innerText = '';
+            selectedOption = null;
+
+            // Progress bar
+            const progress = ((currentQuestion) / questions.length) * 100;
+            document.getElementById('progress-bar').style.width = `${progress}%`;
+
+            q.options.forEach((opt, idx) => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn';
+                btn.innerText = opt;
+                btn.onclick = () => selectOption(idx);
+                optionsContainer.appendChild(btn);
+            });
+        }
+
+        function selectOption(index) {
+            if (selectedOption !== null) return; // Megakadályozza a duplakattintást
+
+            selectedOption = index;
+            const q = questions[currentQuestion];
+            const buttons = document.querySelectorAll('.option-btn');
+
+            if (index === q.correct) {
+                buttons[index].classList.add('correct');
+                document.getElementById('feedback-message').style.color = 'var(--correct-green)';
+                document.getElementById('feedback-message').innerText = 'Helyes válasz! ❤️';
+                
+                // Automatikus továbblépés 1 mp múlva
+                setTimeout(() => {
+                    autoNextQuestion();
+                }, 1000);
+            } else {
+                buttons[index].classList.add('wrong');
+                buttons[q.correct].classList.add('correct');
+                document.getElementById('feedback-message').style.color = 'var(--wrong-red)';
+                document.getElementById('feedback-message').innerText = 'Sebaj, azért továbbengedlek! 😉';
+                
+                // Automatikus továbblépés 2 mp múlva (hogy lássa a jó választ)
+                setTimeout(() => {
+                    autoNextQuestion();
+                }, 2000);
+            }
+        }
+
+        function autoNextQuestion() {
+            currentQuestion++;
+            if (currentQuestion < questions.length) {
+                loadQuestion();
+            } else {
+                document.getElementById('progress-bar').style.width = '100%';
+                showReveal();
+            }
+        }
+
+        function showReveal() {
+            document.getElementById('quiz-header').style.display = 'none';
+            document.getElementById('quiz-body').style.display = 'none';
+            document.getElementById('reveal-section').style.display = 'block';
+        }
+
+        function handleButtonClick() {
+            buttonClicks++;
+            const btn = document.getElementById('start-flight-btn');
+
+            if (buttonClicks === 1) {
+                btn.style.transform = 'translate(-120px, -30px)';
+                btn.innerText = 'Hoppá! Kapj el! 😜';
+            } else if (buttonClicks === 2) {
+                btn.style.transform = 'translate(130px, 25px)';
+                btn.innerText = 'Még egyszer! 🏃‍♂️';
+            } else if (buttonClicks === 3) {
+                btn.style.transform = 'translate(0, 0)';
+                document.getElementById('button-container').style.display = 'none';
+                
+                document.getElementById('map').style.display = 'block';
+                initMapAndFlight();
+            }
+        }
+
+        function initMapAndFlight() {
+            const budapest = [47.4979, 19.0402];
+            const tenerife = [28.2915, -16.6291];
+
+            const map = L.map('map', {
+                zoomControl: false,
+                scrollWheelZoom: false
+            }).setView([39.0, 2.0], 4);
+
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                maxZoom: 19,
+                attribution: '© OpenStreetMap'
+            }).addTo(map);
+
+            L.marker(budapest).addTo(map).bindPopup('Budapest (BUD)').openPopup();
+            L.marker(tenerife).addTo(map).bindPopup('Tenerife (TFS)');
+
+            const latlngs = [
+                budapest,
+                [40.0, 5.0],
+                tenerife
+            ];
+
+            const polyline = L.polyline(latlngs, {
+                color: '#2b580c',
+                weight: 3,
+                dashArray: '8, 8',
+                opacity: 0.7
+            }).addTo(map);
+
+            const planeIcon = L.divIcon({
+                html: '✈️',
+                className: 'plane-icon',
+                iconSize: [30, 30],
+                iconAnchor: [15, 15]
+            });
+
+            const marker = L.marker(budapest, { icon: planeIcon }).addTo(map);
+
+            let progress = 0;
+            const duration = 4000;
+            const startTime = performance.now();
+
+            function animateFlight(now) {
+                const elapsedTime = now - startTime;
+                progress = Math.min(elapsedTime / duration, 1);
+
+                const lat = Math.pow(1 - progress, 2) * budapest[0] + 
+                            2 * (1 - progress) * progress * 40.0 + 
+                            Math.pow(progress, 2) * tenerife[0];
+                            
+                const lng = Math.pow(1 - progress, 2) * budapest[1] + 
+                            2 * (1 - progress) * progress * 5.0 + 
+                            Math.pow(progress, 2) * tenerife[1];
+
+                marker.setLatLng([lat, lng]);
+
+                if (progress < 1) {
+                    requestAnimationFrame(animateFlight);
+                } else {
+                    map.flyTo(tenerife, 8, { duration: 1.5 });
+                    
+                    setTimeout(() => {
+                        document.getElementById('gift-details').classList.add('visible');
+                        triggerConfetti();
+                    }, 1200);
+                }
+            }
+
+            requestAnimationFrame(animateFlight);
+        }
+
+        function triggerConfetti() {
+            const count = 200;
+            const defaults = { origin: { y: 0.7 } };
+
+            function fire(particleRatio, opts) {
+                confetti({
+                    ...defaults,
+                    ...opts,
+                    particleCount: Math.floor(count * particleRatio)
+                });
+            }
+
+            fire(0.25, { spread: 26, startVelocity: 55 });
+            fire(0.2, { spread: 60 });
+            fire(0.35, { spread: 100, decay: 0.91, scalar: 0.8 });
+            fire(0.1, { spread: 120, startVelocity: 25, decay: 0.92, scalar: 1.2 });
+            fire(0.1, { spread: 120, startVelocity: 45 });
+        }
+
+        window.onload = loadQuestion;
+    </script>
+</body>
+</html>
